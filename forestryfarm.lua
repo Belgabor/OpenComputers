@@ -33,4 +33,13 @@ elseif depth == 14 then
   if width == 13 or width == 14 then
     valid = true
   end
+elseif depth == 17 then
+  if width == 15 or width == 17 then
+    valid = true
+  end
+end
+
+if not valid then
+  print("Error: "..depth.."x"..width.." is not a vaild farm size.")
+  os.exit(false)
 end
