@@ -59,12 +59,12 @@ elseif tArgs[1] ~= "r" then
   return
 end
 
-local depth = tArgs[2]
-local width = tArgs[3]
+local depth = tonumber(tArgs[2])
+local width = tonumber(tArgs[3])
 local voffset = 0
 
 if #tArgs > 3 then
-  voffset = tArgs[4]
+  voffset = tonumber(tArgs[4])
 end
 
 if width > depth then
