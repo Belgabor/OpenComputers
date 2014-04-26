@@ -1,4 +1,4 @@
---local robot = require("robot")
+local robot = require("robot")
 local os = require("os")
 
 local tArgs = {...}
@@ -252,6 +252,41 @@ for x = (wing-1),0,-1 do
   for i = 1,(wing-x-1) do
     safeMove(forward)
   end
-  nextRow()
+  if x > 0 then
+    nextRow()
+  end
+end
+
+-- move into position
+for c = 1,2 do
+  if odd then
+    robot.turnLeft()
+  else
+    robot.turnRight()
+  end
+  for i = 1,wing do
+    safeMove(forward)
+  end
+end
+
+if voffset == 4 then
+  safeMove(up)
+else
+  for c = 1, (3-voffset) do
+    safeMove(down)
+  end
+end
+
+for h = 1,4 do
+  for x = 1,core_width do
+    for y = 1,(core_depth - 1) do
+      safePlace(down, farm)
+      safeMove(forward)
+    end
+    safePlace(down, farm)
+    nextRow()
+  end
+  safeMove(up)
+  robot.turnAround()
 end
 
