@@ -3,13 +3,22 @@ local os = require("os")
 
 local tArgs = {...}
 
-function moveFail(resaon)
-  print("Failed to move: "..reason)
+local currentfarm = 1
+local currentland = 5
+
+local forward = 1
+local up = 2
+local down = 3
+local farm = 1
+local land = 2
+
+function fail(reason)
+  print(reason)
   os.exit(false)
 end
 
 function safeMove(dir)
-  if dir == 1 then
+  if dir == forward then
     -- forward
     local m, r = robot.detect()
     if m then
@@ -17,9 +26,9 @@ function safeMove(dir)
     end
     m, r = robot.forward()
     if not m then
-      moveFail(r)
+      fail("Failed to move: "..r)
     end
-  elseif dir == 2 then
+  elseif dir == up then
     -- up
     local m, r = robot.detectUp()
     if m then
@@ -27,9 +36,9 @@ function safeMove(dir)
     end
     m, r = robot.up()
     if not m then
-      moveFail(r)
+      fail("Failed to move: "..r)
     end
-  elseif dir == 2 then
+  elseif dir == down then
     -- down
     local m, r = robot.detectDown()
     if m then
@@ -37,7 +46,58 @@ function safeMove(dir)
     end
     m, r = robot.down()
     if not m then
-      moveFail(r)
+      fail("Failed to move: "..r)
+    end
+  end
+end
+
+function safePlace(dir, type)
+  if type == farm then
+    while robot.count(currentfarm) == 0 do
+      currentfarm = currentfarm + 1
+      if currentfarm > 4 then
+        fail("Out of farm blocks.")
+      end
+    end
+    robot.select(currentfarm)
+  elseif type == land then
+    while robot.count(currentland) == 0 do
+      currentland = currentland + 1
+      if currentland > 8 then
+        fail("Out of farmland blocks.")
+      end
+    end
+    robot.select(currentland)
+  end
+  if dir == forward then
+    -- forward
+    local m, r = robot.detect()
+    if m then
+      robot.swing()
+    end
+    m = robot.place()
+    if not m then
+      fail("Failed to place block, probably due to "..r)
+    end
+  elseif dir == up then
+    -- up
+    local m, r = robot.detectUp()
+    if m then
+      robot.swingUp()
+    end
+    m = robot.placeUp()
+    if not m then
+      fail("Failed to place block, probably due to "..r)
+    end
+  elseif dir == down then
+    -- down
+    local m, r = robot.detectDown()
+    if m then
+      robot.swingDown()
+    end
+    m = robot.placeDown()
+    if not m then
+      fail("Failed to place block, probably due to "..r)
     end
   end
 end
@@ -102,9 +162,23 @@ if not valid then
   print("Error: "..depth.."x"..width.." is not a valid farm size.")
   return
 else
+  -- check inventory
+  local haveFarm = 0
+  local haveLand = 0
+  for i = 1,4 do
+    haveFarm = haveFarm + robot.count(i)
+  end
+  for i = 5,8 do
+    haveLand = haveLand + robot.count(i)
+  end
+
   print("Dimensions ok, need")
-  print("- "..nFarm.." farm blocks")
-  print("- "..nLand.." farmland blocks")
+  print("- "..nFarm.." farm blocks ("..haveFarm..")")
+  print("- "..nLand.." farmland blocks ("..haveLand..")")
+  if haveFarm < nFarm or haveLand < nLand then
+    print("Error: Not enough blocks in inventory")
+    return
+  end
 end
 
 if voffset < 0 or voffset > 4 then
@@ -112,12 +186,72 @@ if voffset < 0 or voffset > 4 then
   return
 end
 
-safeMove(1)
+safeMove(forward)
 if left then
   robot.turnLeft()
   for i = 1,width do
-    safeMove(1)
+    safeMove(forward)
   end
   robot.turnRight()
+end
+
+-- build land
+local odd = true
+
+function nextRow()
+  if odd then
+    robot.turnRight()
+    safeMove(forward)
+    robot.turnRight()
+  else
+    robot.turnLeft()
+    safeMove(forward)
+    robot.turnLeft()
+  end
+  odd = not odd
+end
+
+for x = 0,(wing-1) do
+  for i = 1,(wing-x) do
+    safeMove(forward)
+  end
+  for i = 1, (core_depth + (x*2)) do
+    safePlace(down, land)
+    safeMove(forward)
+  end
+  for i = 1,(wing-x-1) do
+    safeMove(forward)
+  end
+  nextRow()
+end
+
+for x = 1,core_width do
+  for i = 1,wing do
+    safePlace(down, land)
+    safeMove(forward)  
+  end
+  for i = 1,core_depth do
+    safeMove(forward)
+  end
+  for i = 1,(wing-1) do
+    safePlace(down, land)
+    safeMove(forward)  
+  end
+  safePlace(down, land)
+  nextRow()
+end
+
+for x = (wing-1),0,-1 do
+  for i = 1,(wing-x) do
+    safeMove(forward)
+  end
+  for i = 1, (core_depth + (x*2)) do
+    safePlace(down, land)
+    safeMove(forward)
+  end
+  for i = 1,(wing-x-1) do
+    safeMove(forward)
+  end
+  nextRow()
 end
 
