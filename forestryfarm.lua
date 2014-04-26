@@ -12,6 +12,8 @@ local down = 3
 local farm = 1
 local land = 2
 
+local clear = false
+
 function fail(reason)
   print(reason)
   os.exit(false)
@@ -52,22 +54,24 @@ function safeMove(dir)
 end
 
 function safePlace(dir, type)
-  if type == farm then
-    while robot.count(currentfarm) == 0 do
-      currentfarm = currentfarm + 1
-      if currentfarm > 4 then
-        fail("Out of farm blocks.")
+  if not clear then
+    if type == farm then
+      while robot.count(currentfarm) == 0 do
+        currentfarm = currentfarm + 1
+        if currentfarm > 4 then
+          fail("Out of farm blocks.")
+        end
       end
-    end
-    robot.select(currentfarm)
-  elseif type == land then
-    while robot.count(currentland) == 0 do
-      currentland = currentland + 1
-      if currentland > 8 then
-        fail("Out of farmland blocks.")
+      robot.select(currentfarm)
+    elseif type == land then
+      while robot.count(currentland) == 0 do
+        currentland = currentland + 1
+        if currentland > 8 then
+          fail("Out of farmland blocks.")
+        end
       end
+      robot.select(currentland)
     end
-    robot.select(currentland)
   end
   if dir == forward then
     -- forward
@@ -75,9 +79,11 @@ function safePlace(dir, type)
     if m then
       robot.swing()
     end
-    m = robot.place()
-    if not m then
-      fail("Failed to place block, probably due to "..r)
+    if not clear then
+      m = robot.place()
+      if not m then
+        fail("Failed to place block, probably due to "..r)
+      end
     end
   elseif dir == up then
     -- up
@@ -85,9 +91,11 @@ function safePlace(dir, type)
     if m then
       robot.swingUp()
     end
-    m = robot.placeUp()
-    if not m then
-      fail("Failed to place block, probably due to "..r)
+    if not clear then
+      m = robot.placeUp()
+      if not m then
+        fail("Failed to place block, probably due to "..r)
+      end
     end
   elseif dir == down then
     -- down
@@ -95,9 +103,11 @@ function safePlace(dir, type)
     if m then
       robot.swingDown()
     end
-    m = robot.placeDown()
-    if not m then
-      fail("Failed to place block, probably due to "..r)
+    if not clear then
+      m = robot.placeDown()
+      if not m then
+        fail("Failed to place block, probably due to "..r)
+      end
     end
   end
 end
@@ -105,18 +115,32 @@ end
 if #tArgs > 4 or #tArgs < 3 then
   print("wrong number of arguments")
   print("forestryfarm.lua orientation depth width [vertical_offset]")
-  print("- orientation is 'r' or 'l' to build to the right or left respectively")
+  print("Use slots 1-4 for farm blocks, slots 5-8 for farmland blocks.")
+  print("- orientation is 'r' or 'l' to build to the right or left respectively.\n  Add a 'c' to run in clear mode (make room, do not build farm). Recommended if large amounts of the target space are filled or you might get wrong blocks placed.\n  Alternatively you can add a 'v' to run in verify mode to validate parameters and supplies.")
   print("- depth must be the larger dimension")
   print("- vertical offset: by default the farm blocks are build flush with the farmland (0), use positive numbers to have them built higher (4 max)")
   return
 end
 
 local left = false
-if tArgs[1] == "l" then
+local verify = false
+local mode = tArgs[1]
+mode:lower()
+if mode:find("l") then
   left = true
-elseif tArgs[1] ~= "r" then
-  print("Error! " .. tArgs[1])
+elseif not mode:find("r") then
+  print("Error: No direction set " .. mode)
   return
+end
+
+if mode:find("c") then
+  clear = true
+  print("Running in clear mode")
+end
+
+if mode:find("v") then
+  verify = true
+  print("Running in verify mode")
 end
 
 local depth = tonumber(tArgs[2])
@@ -175,14 +199,20 @@ else
   print("Dimensions ok, need")
   print("- "..nFarm.." farm blocks ("..haveFarm..")")
   print("- "..nLand.." farmland blocks ("..haveLand..")")
-  if haveFarm < nFarm or haveLand < nLand then
-    print("Error: Not enough blocks in inventory")
-    return
+  if not clear then
+    if haveFarm < nFarm or haveLand < nLand then
+      print("Error: Not enough blocks in inventory")
+      return
+    end
   end
 end
 
 if voffset < 0 or voffset > 4 then
   print ("Error: invalid vertical offset "..voffset)
+  return
+end
+
+if verify then
   return
 end
 
