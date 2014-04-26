@@ -284,7 +284,9 @@ for h = 1,4 do
       safeMove(forward)
     end
     safePlace(down, farm)
-    nextRow()
+    if y < (core_depth -1) then
+      nextRow()
+    end
   end
   safeMove(up)
   robot.turnAround()
