@@ -284,7 +284,7 @@ for h = 1,4 do
       safeMove(forward)
     end
     safePlace(down, farm)
-    if y < (core_depth -1) then
+    if x < core_width then
       nextRow()
     end
   end
