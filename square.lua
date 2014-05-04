@@ -51,7 +51,7 @@ end
 function safePlace(dir)
   while robot.count(currentslot) == 0 do
     currentslot = currentslot + 1
-    if currentslot > 4 then
+    if currentslot > 16 then
       fail("Out of blocks.")
     end
   end
