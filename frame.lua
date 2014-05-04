@@ -96,9 +96,9 @@ function safePlace(dir)
   end
 end
 
-if #tArgs > 4 or #tArgs < 2 then
+if #tArgs > 5 or #tArgs < 2 then
   print("wrong number of arguments")
-  print("square.lua depth width [depth_offset] [width_offset]")
+  print("rect.lua depth width [depth_offset] [width_offset] [height_offset]")
   return
 end
 
@@ -106,11 +106,15 @@ local depth = tonumber(tArgs[1])
 local width = tonumber(tArgs[2])
 local depth_offset = 0
 local width_offset = 0
+local height_offset = 0
 
 if #tArgs > 2 then
   depth_offset = tonumber(tArgs[3])
   if #tArgs > 3 then
     width_offset = tonumber(tArgs[4])
+    if #tArgs > 4 then
+      height_offset = tonumber(tArgs[5])
+    end
   end
 end
 
@@ -121,7 +125,7 @@ for i = 1,16 do
   haveBlock = haveBlock + robot.count(i)
 end
 
-if haveBlock < (depth*width) then
+if haveBlock < ((2*depth) + (2*width) - 2) then
   print("Error: Not enough blocks in inventory")
   return
 end
@@ -135,34 +139,42 @@ if width_offset > 0 then
   robot.turnLeft()
 elseif width_offset < 0 then
   robot.turnLeft()
-  for i = 1,abs(width_offset) do
+  for i = 1,(-width_offset) do
     safeMove(forward)
   end
   robot.turnRight()
 end
 
--- build
-local odd = true
-
-function nextRow()
-  if odd then
-    robot.turnRight()
-    safeMove(forward)
-    robot.turnRight()
-  else
-    robot.turnLeft()
-    safeMove(forward)
-    robot.turnLeft()
+if height_offset > 0 then
+  for i = 1,height_offset do
+    safeMove(up)
   end
-  odd = not odd
+elseif height_offset < 0 then
+  for i = 1,-height_offset do
+    safeMove(down)
+  end
 end
 
-for x = 1,width do
-  for i = 1, (depth-1) do
+if depth_offset > 0 then
+  for i = 1,depth_offset do
+    safeMove(forward)
+  end
+elseif depth_offset < 0 then
+  robot.turnAround()
+  for i = 1,-depth_offset do
+    safeMove(forward)
+  end
+  robot.turnAround()
+end
+
+-- build
+for i = 1,2 do
+  for y = 1,(depth-1) do
     safePlace(down)
     safeMove(forward)
   end
-  safePlace(down)
-  nextRow()
+  for x = 1,(width-1) do
+    safePlace(down)
+    safeMove(forward)
+  end
 end
-
