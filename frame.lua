@@ -173,8 +173,10 @@ for i = 1,2 do
     safePlace(down)
     safeMove(forward)
   end
+  robot.turnRight()
   for x = 1,(width-1) do
     safePlace(down)
     safeMove(forward)
   end
+  robot.turnRight()
 end
