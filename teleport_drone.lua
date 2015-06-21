@@ -87,15 +87,9 @@ function serialize(value, pretty)
       end
     elseif t == "string" then
       return string.format("%q", v):gsub("\\\n","\\n")
-    elseif t == "table" and pretty and getmetatable(v) and getmetatable(v).__tostring then
-      return tostring(v)
     elseif t == "table" then
       if ts[v] then
-        if pretty then
-          return "recursion"
-        else
-          error("tables with cycles are not supported")
-        end
+        error("recursion")
       end
       ts[v] = true
       local i, r = 1, nil
@@ -154,25 +148,11 @@ function serialize(value, pretty)
       ts[v] = nil -- allow writing same table more than once
       return (r or "{") .. "}"
     else
-      if pretty then
-        return tostring(t)
-      else
         error("unsupported type: " .. t)
-      end
     end
   end
   local result = s(value, 1)
   local limit = type(pretty) == "number" and pretty or 10
-  if pretty then
-    local truncate = 0
-    while limit > 0 and truncate do
-      truncate = string.find(result, "\n", truncate + 1, true)
-      limit = limit - 1
-    end
-    if truncate then
-      return result:sub(1, truncate) .. "..."
-    end
-  end
   return result
 end
 
@@ -181,7 +161,7 @@ scanSelectors()
 while true do
   local msg, _, from, port, _, command, param = computer.pullSignal()
   if (msg ~= "modem_message") or (port ~= rcv_port) then
-    goto continue
+    goto cont
   end
   if command == "getSelectors" then
     print("getSelectors", from)
@@ -201,5 +181,5 @@ while true do
       setLocation(param)
     end
   end
-  ::continue::
+  ::cont::
 end

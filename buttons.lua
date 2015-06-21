@@ -72,6 +72,7 @@ function int_makeButton(parent, tag, label, x, y, width, height, callback, param
   nb = makeBase()
   nb.tag = tag
   nb.label = label
+  nb.hilight_label = label
   nb.x = x
   nb.y = y
   nb.width = width
@@ -141,7 +142,11 @@ function int_makeButton(parent, tag, label, x, y, width, height, callback, param
     end
     
     gpu.fill(self.x, self.y, self.width, self.height, ' ')
-    gpu.set(self.x + math.floor((self.width - string.len(self.label))/2), self.y + math.floor(self.height/2), self.label)
+    local lab = self.label
+    if hilight then
+      lab = self.hilight_label
+    end
+    gpu.set(self.x + math.floor((self.width - string.len(lab))/2), self.y + math.floor(self.height/2), lab)
 
     gpu.setBackground(oldbg, oldgbt)
     gpu.setForeground(oldfg, oldfgt)
@@ -200,6 +205,10 @@ function int_makePage(parent)
     self.buttons[button.tag] = button
   end  
 
+  function np:removeButton(button)
+    self.buttons[button.tag] = nil
+  end  
+
   return np
 end
 
@@ -223,13 +232,55 @@ function buttons.makePaginator(screen_color, font_color, button_color, hilight_c
   npg.hilight_font_color = font_color
   npg.pages = {}
   npg.page = 1
+  npg.spacer_button_label = 1
+  npg.spacer_button_button_h = 2
+  npg.spacer_button_button_v = 1
+  npg.button_height = 1
+  npg.button_min_width = 0
+  npg.label_next = " > "
+  npg.label_prev = " < "
+  npg.max_columns = 3
+  -- 0 - top, 1 - bottom, 2 - both
+  npg.page_type = 0
+  npg.extra_buttons = {}
+  npg.extra_buttons_def = {}
+  
   
   npg.pages[1] = int_makePage(npg)
   
   function npg:draw(noclear)
     self.pages[self.page]:draw(noclear)
   end
-
+  
+  function npg:prepare()
+    local w, h = gpu.getResolution()
+    self.extra_width = 0
+    for k,v in pairs(self.extra_button_def) do
+      self.extra_width = math.max(self.extra_width, string.len(v.label) + (2*self.spacer_button_label))
+    end
+    for k,v in pairs(self.extra_button_def) do
+      local x = 1
+      local y = 1
+      if string.sub(k, 1, 1) == "b" then
+        y = (h - self.button_height) + 1
+      end
+      if string.sub(k, 2, 2) == "r" then
+        y = (w - self.extra_width) + 1
+      end
+      self.extra_buttons[k] = self.pages[1]:addButton(k, v.label, x, y, self.extra_width, self.button_height)
+      self.extra_buttons[k]:init(v)
+    end
+    
+  end
+  
+  function npg:prepareExtra(location, label, callback, parameter)
+    bdef = {}
+    bdef.label = label
+    bdef.callback = callback
+    bdef.parameter = parameter
+    self.extra_buttons_def[location] = bdef
+  end
+  
   return npg
 end
 
