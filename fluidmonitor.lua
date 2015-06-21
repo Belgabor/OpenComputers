@@ -21,7 +21,7 @@ while true do
     if type(v) == "table" then
       if liquids[v.name] then
         current[v.name] = v.amount
-        label[v.name] = v.label
+        labels[v.name] = v.label
       end
     end
   end
@@ -34,11 +34,11 @@ while true do
   end
 
   local row = 1  
-  gpu.fill(1, 1, lens[1]+lens[2]+lens[3]+2, #liquids, ' ')
+  gpu.fill(1, 1, lens[1]+lens[2]+lens[3]+4, #liquids, ' ')
   for k in pairs(liquids) do
-    gpu.set(1, row, label[k])
-    gpu.set(lens[1]+1+(lens[2] - string.len(prev[k])), row, prev[k])
-    gpu.set(lens[1]+2+lens[2]+(lens[2] - string.len(current[k])), row, current[k])
+    gpu.set(1, row, labels[k])
+    gpu.set(lens[1]+2+(lens[2] - string.len(prev[k])), row, tostring(prev[k]))
+    gpu.set(lens[1]+4+lens[2]+(lens[2] - string.len(current[k])), row, tostring(current[k]))
     
     prev[k] = current[k]
     
