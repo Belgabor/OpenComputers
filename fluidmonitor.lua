@@ -12,12 +12,12 @@ end
 
 
 while true do
-  local liquids = me.getFluidsInNetwork()
+  local meliquids = me.getFluidsInNetwork()
   local current = {}
   for k in pairs(liquids) do
     current[k] = 0
   end
-  for i, v in pairs(liquids) do
+  for i, v in pairs(meliquids) do
     if type(v) == "table" then
       if liquids[v.name] then
         current[v.name] = v.amount
@@ -45,4 +45,5 @@ while true do
     row = row + 1
   end
   
+  os.sleep(5)
 end
