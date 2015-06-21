@@ -2,6 +2,8 @@ local component = require("component")
 local me = component.me_controller
 local gpu = component.gpu
 
+local sw, sh = gpu.getResolution()
+
 local liquids = {lithium=true, tritium=true, deuterium=true}
 local labels = {}
 local prev = {}
@@ -34,11 +36,13 @@ while true do
   end
 
   local row = 1  
-  gpu.fill(1, 1, lens[1]+lens[2]+lens[3]+4, #liquids, ' ')
+  gpu.fill(1, 1, sw, sh, ' ')
   for k in pairs(liquids) do
     gpu.set(1, row, labels[k])
     gpu.set(lens[1]+2+(lens[2] - string.len(prev[k])), row, tostring(prev[k]))
-    gpu.set(lens[1]+4+lens[2]+(lens[2] - string.len(current[k])), row, tostring(current[k]))
+    gpu.set(lens[1]+4+lens[2]+(lens[3] - string.len(current[k])), row, tostring(current[k]))
+    local diff = current[k] - prev[k]
+    gpu.set(lens[1]+6+lens[2]+lens[3]+(lens[3] - string.len(diff)), row, tostring(diff))
     
     prev[k] = current[k]
     
