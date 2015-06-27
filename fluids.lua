@@ -28,11 +28,11 @@ function getLiquids()
 end
 
 if (#args == 0) or (args[1] == 'list') then
+  getLiquids()
+
   local i = columns
   local s = ""
   
-  getLiquids()
-
   local s_liquids = {}
   for n in pairs(liquids) do
     table.insert(s_liquids, n)
@@ -40,7 +40,7 @@ if (#args == 0) or (args[1] == 'list') then
   table.sort(s_liquids)
   
   for x, n in ipairs(s_liquids) do
-    s = s .. text.padRight(n, liquid_width) .. " " .. text.padLeft(liquids[n], amount_width) .. "  "
+    s = s .. text.padRight(n, liquid_width) .. " " .. text.padLeft(tostring(liquids[n]), amount_width) .. "  "
     i = i - 1
     if i == 0 then
       i = columns
@@ -68,13 +68,13 @@ elseif args[1] == 'monitor' then
   for k, v in ipairs(q_liquids) do
     local current = (liquids[v] ~= nil) and liquids[v] or 0
     local diff = current-pre_liquids[n]
-    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(pre_liquids[n], amount_width) .. " " .. text.padLeft(current, amount_width) .. " " .. text.padLeft(diff, amount_width) .. " " .. text.padLeft(diff/t, amount_width))
+    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(tostring(pre_liquids[n]), amount_width) .. " " .. text.padLeft(tostring(current), amount_width) .. " " .. text.padLeft(tostring(diff), amount_width) .. " " .. text.padLeft(tostring(diff/t), amount_width))
   end
 else
   local q_liquids = text.tokenize(args[2]:gsub(",", " "))
   table.sort(q_liquids)
   getLiquids()
   for k, v in ipairs(q_liquids) do
-    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(liquids[n], amount_width))
+    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(tostring(liquids[n]), amount_width))
   end
 end
