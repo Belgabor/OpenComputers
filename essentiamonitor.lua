@@ -37,7 +37,7 @@ function storeAspects()
 end
 
 function getAspects()
-  local fluids = me.getFluidsInNework()
+  local fluids = me.getFluidsInNetwork()
   for k in pairs(aspects) do
     aspects[k] = 0
   end
