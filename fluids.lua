@@ -67,8 +67,8 @@ elseif args[1] == 'monitor' then
   getLiquids()
   for k, v in ipairs(q_liquids) do
     local current = (liquids[v] ~= nil) and liquids[v] or 0
-    local diff = current-pre_liquids[n]
-    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(tostring(pre_liquids[n]), amount_width) .. " " .. text.padLeft(tostring(current), amount_width) .. " " .. text.padLeft(tostring(diff), amount_width) .. " " .. text.padLeft(tostring(diff/t), amount_width))
+    local diff = current-pre_liquids[v]
+    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(tostring(pre_liquids[v]), amount_width) .. " " .. text.padLeft(tostring(current), amount_width) .. " " .. text.padLeft(tostring(diff), amount_width) .. " " .. text.padLeft(tostring(diff/t), amount_width))
   end
 else
   local q_liquids = text.tokenize(args[2]:gsub(",", " "))
