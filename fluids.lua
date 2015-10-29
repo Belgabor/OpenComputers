@@ -75,6 +75,6 @@ else
   table.sort(q_liquids)
   getLiquids()
   for k, v in ipairs(q_liquids) do
-    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(tostring(liquids[n]), amount_width))
+    print(text.padRight(v, liquid_width) .. " " .. text.padLeft(tostring(liquids[v]), amount_width))
   end
 end
