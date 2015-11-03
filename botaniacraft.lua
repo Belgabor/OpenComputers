@@ -24,11 +24,12 @@ while true do
   while true do
     i = i + 1
     local s = transposer.getSlotStackSize(s_transposer_chest, i)
-    if (i == 0) then
+    if (s == 0) then
       break
     end
     transposer.transferItem(s_transposer_chest, s_transposer_altar, 1, i)
   end
+  os.sleep(1)
   
   rs.setOutput(s_pc_dispenser, 15)
   os.sleep(1)
