@@ -1,24 +1,34 @@
 local component = require("component")
 local rs = component.redstone
 local sides = require("sides")
-
-if (component.isAvailable("transposer")) then
-  local act = component.transposer
-else
-  local act = component.inventory_controller
-end
+local act
+local getSlotSize
 
 local s_act_extractor = sides.right
 local s_rs_clutch = sides.up
 local have_ecu = component.isAvailable("EngineControlUnit")
 
+if (component.isAvailable("transposer")) then
+  act = component.transposer
+  getSlotSize = function(i) return component.transposer.getSlotStackSize(s_act_extractor, i) end
+elseif (component.isAvailable("inventory_controller")) then
+  act = component.inventory_controller
+  getSlotSize = function(i) return component.inventory_controller.getSlotStackSize(s_act_extractor, i) end
+else
+  getSlotSize = function(i)
+    a,b,c,d = component.Extractor.getSlot(i-1)
+    return c
+  end
+end
+
+
 -- EngineControlUnit.setECU(0) -> 4
 while true do
   local signal = 2
-  local max = act.getSlotStackSize(s_act_extractor, 4) + act.getSlotStackSize(s_act_extractor, 7)
-  local s3 = act.getSlotStackSize(s_act_extractor, 3) + act.getSlotStackSize(s_act_extractor, 6)
-  local s2 = act.getSlotStackSize(s_act_extractor, 2) + act.getSlotStackSize(s_act_extractor, 5)
-  local s1 = act.getSlotStackSize(s_act_extractor, 1)
+  local max = getSlotSize(4) + getSlotSize(7)
+  local s3 = getSlotSize(3) + getSlotSize(6)
+  local s2 = getSlotSize(2) + getSlotSize(5)
+  local s1 = getSlotSize(1)
   
   if (s3 > max) then
     signal = 1
