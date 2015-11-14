@@ -48,6 +48,8 @@ else
 end
 
 -- Check validity
+print("CVTs", #cvts)
+print("ECUs", #ecus)
 local err = false
 for i = 1,3 do
   local n_cvts = math.ceil(math.log(math.abs(cvt_setting[i]))/math.log(32))
