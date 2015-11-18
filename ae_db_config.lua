@@ -377,8 +377,8 @@ function handleDbTouch(x, y, button)
           local newitem = getNewitem()
           if newitem then
             me.store(newitem, the_db.db.address, item, 1)
-            dirty = true
           end
+          dirty = true
         end
         break
       end
