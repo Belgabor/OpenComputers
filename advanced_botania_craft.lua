@@ -4,8 +4,11 @@ local event = require("event")
 local unicode = require("unicode")
 local serialization = require("serialization")
 local filesystem = require("filesystem")
+local colors = require("colors")
+local sides = require("sides")
 
 local gpu = component.gpu
+local redstone = component.redstone
 
 local bg_default = 0
 local bg_button = 0xFF0000
@@ -15,13 +18,79 @@ local bg_title = 0xCCCCCC
 local fg_default = 0xCCCCCC
 local fg_title = 0x000000
 
+function setColors(tag)
+  if tag == "default" then
+    gpu.setBackground(bg_default)
+    gpu.setForeground(fg_default)
+  elseif tag == "valid" then
+    gpu.setBackground(bg_default)
+    gpu.setForeground(0x00FF00)
+  elseif tag == "craftable" then
+    gpu.setBackground(bg_default)
+    gpu.setForeground(0xFFFF00)
+  elseif tag == "invalid" then
+    gpu.setBackground(bg_default)
+    gpu.setForeground(0xFF0000)
+  end  
+end
+
+local interfaces = {
+  component.proxy("1b9ae71b-dfb1-4b29-a370-be5897e77430"),
+  component.proxy("f198827c-402c-4afa-b451-e81947e8ee5f")
+}
+
+local interface_sides = {
+  sides.top,
+  sides.east
+}
+
+local rs_side = sides.right
+local rs_o_toggle_bus = colors.lime
+local rs_o_activator = colors.lightblue
+local rs_o_dispenser = colors.yellow
+local rs_i_apothecary = colors.white
+local rs_i_brewery = colors.orange
+local rs_i_altar = colors.magenta
+
 local recipe_folder = "/recipes"
 
+local transposer_apothecary = sides.north
+local transposer_brewery = sides.west
+local transposer_altar = sides.south
+
+local sleep_item_missing = 1
+local sleep_pulse = 1
+local sleep_wait_apothecary_water = 5
+local sleep_wait_item_crafting = 5
+local sleep_apothecary_seed_delay = 0.5
+local sleep_brewery_item_delay = 0.5
+local sleep_wait_brewery_crafting = 5
+local sleep_wait_brewery_initiate_crafting = 2
+local sleep_altar_start_delay = 1
+local sleep_wait_altar_initiate_crafting = 2
+local sleep_wait_altar_crafting = 5
+local sleep_altar_finish_delay = 1
+
+-- -------
+
+local rs_level_apothecary_water = 243
+local rs_level_brewery_crafting = 7
+local rs_level_altar_crafting = 7
+local rs_level_altar_done = 24
+
 local sw, sh = gpu.getResolution()
+local sw2 = math.floor(sw/2)
 
 local dirty = True
 local key_shift = false
 local key_ctrl = false
+
+local transposer
+if (component.isAvailable("transposer")) then
+  transposer = component.transposer
+else
+  transposer = component.inventory_controller
+end
 
 local me
 if component.isAvailable("me_controller") then
@@ -95,6 +164,8 @@ if #recipes == 0 then
   os.exit()
 end
 
+table.sort(recipes, function(a,b) return a.name < b.name end)
+
 local cols = math.ceil(#recipes/(sh-2))
 local col_width = math.floor((sw-((cols-1)*2))/cols)
 
@@ -128,6 +199,42 @@ function drawCancel()
   gpu.set(sw-8, sh, " Cancel ")
 end
 
+function drawCraft()
+  gpu.set(2, sh, " Craft ")
+end
+
+function drawUp1()
+  gpu.set(sw2+5, sh, " > ")
+end
+
+function drawUp10()
+  gpu.set(sw2+8, sh, " > ")
+end
+
+function drawUp64()
+  gpu.set(sw2+11, sh, " > ")
+end
+
+function drawUp100()
+  gpu.set(sw2+14, sh, " > ")
+end
+
+function drawDown1()
+  gpu.set(sw2-9, sh, " < ")
+end
+
+function drawDown10()
+  gpu.set(sw2-12, sh, " < ")
+end
+
+function drawDown64()
+  gpu.set(sw2-15, sh, " < ")
+end
+
+function drawDown100()
+  gpu.set(sw2-18, sh, " < ")
+end
+
 local count_dirty
 local the_count
 local current_count
@@ -139,6 +246,15 @@ function displayCountButtons()
   gpu.set(math.floor((sw-string.len(s))/2), sh, s)
   
   gpu.setBackground(bg_button)
+  drawCraft()
+  drawDown1()
+  drawDown10()
+  drawDown64()
+  drawDown100()
+  drawUp1()
+  drawUp10()
+  drawUp64()
+  drawUp100()
   drawCancel()
   gpu.setBackground(bg_default)
 end
@@ -154,15 +270,29 @@ function displayCount(recipe)
   gpu.setForeground(fg_default)
   gpu.setBackground(bg_default)
   local row = 2
+  local count_cache = {}
   for i, set in ipairs(recipe.sets) do
     row = row + 1
+    setColors("default")
     gpu.set(1, row, "Set #"..i)
     for x, item in ipairs(set) do
       row = row + 1
-      gpu.set(3, row, item.me.count.." "..item.label)
+      local count = item.me.count
+      if count_cache[item.hash] ~= nil then
+        count = count_cache[item.hash]
+      end
+      if count >= current_count then
+        setColors("valid")
+      elseif item.me.craftable then
+        setColors("craftable")
+      else
+        setColors("invalid")
+      end
+      gpu.set(3, row, count.." "..item.label)
+      count_cache[item.hash] = count - current_count
     end
   end
-    
+  setColors("default")
 end
 
 function changeCount(diff)
@@ -175,9 +305,9 @@ function changeCount(diff)
     end
   else
     current_count = current_count + diff
-    if current_count < 1 then
-      current_count = 1
-    end
+  end
+  if current_count < 1 then
+    current_count = 1
   end
   if current_count ~= old then
     count_dirty = true
@@ -185,7 +315,34 @@ function changeCount(diff)
 end
 
 function handleCountButtonTouch(x, button)
-  if (x>=sw-8) and (x<=sw-1) then
+  if (x>=2) and (x<=8) then
+    blinkButton(drawCraft)
+    the_count = current_count
+  elseif (x>=sw2-18) and (x<sw2-15) then
+    blinkButton(drawDown100)
+    changeCount(-100)
+  elseif (x>=sw2-15) and (x<sw2-12) then
+    blinkButton(drawDown64)
+    changeCount(-64)
+  elseif (x>=sw2-12) and (x<sw2-9) then
+    blinkButton(drawDown10)
+    changeCount(-10)
+  elseif (x>=sw2-9) and (x<sw2-6) then
+    blinkButton(drawDown1)
+    changeCount(-1)
+  elseif (x>=sw2+5) and (x<sw2+8) then
+    blinkButton(drawUp1)
+    changeCount(1)
+  elseif (x>=sw2+8) and (x<sw2+11) then
+    blinkButton(drawUp10)
+    changeCount(10)
+  elseif (x>=sw2+11) and (x<sw2+14) then
+    blinkButton(drawUp64)
+    changeCount(64)
+  elseif (x>=sw2+14) and (x<sw2+17) then
+    blinkButton(drawUp100)
+    changeCount(100)
+  elseif (x>=sw-8) and (x<=sw-1) then
     blinkButton(drawCancel)
     the_count = 0
   end
@@ -304,11 +461,239 @@ function getCraftCount(recipe)
   end
 end
 
+function displayCraftTitle(title)
+  clearScreen()
+  gpu.set(1,1,"Crafting "..title)
+end
+
+function displayCraftIteration(n, o)
+  gpu.fill(1, 2, sw, 1, " ")
+  gpu.set(1,2,"Iteration: "..n.."/"..o)
+end
+
+function displayCraftStatus(status)
+  gpu.fill(1, 3, sw, 1, " ")
+  gpu.set(1, 3, "Status: "..status)
+end
+
+function clearInterfaces()
+  for i, iface in ipairs(interfaces) do
+    for s = 1,8 do
+      iface.setInterfaceConfiguration(s)
+    end
+  end
+end
+
+function disableInterfaces(doit)
+  if doit then
+    redstone.setBundledOutput(rs_side, rs_o_toggle_bus, 255)
+  else
+    redstone.setBundledOutput(rs_side, rs_o_toggle_bus, 0)
+  end
+end
+
+function pulse(color)
+  redstone.setBundledOutput(rs_side, color, 255)
+  os.sleep(sleep_pulse)
+  redstone.setBundledOutput(rs_side, color, 0)
+end
+
+function craftApothecary(recipe)
+  displayCraftStatus("Crafting: Filling petal apothecary")
+  while true do
+    pulse(rs_o_activator)
+    if redstone.getBundledInput(rs_side, rs_i_apothecary) == rs_level_apothecary_water then
+      break
+    end
+    os.sleep(sleep_wait_apothecary_water)
+  end
+  
+  displayCraftStatus("Crafting: Dropping items")
+  local current_interface = 1
+  local current_slot = 1
+  for i = 1, #recipe.sets[1] do
+    while not transposer.transferItem(interface_sides[current_interface], transposer_apothecary, 1, current_slot, 1) do
+      os.sleep(sleep_wait_item_crafting)
+    end
+    
+    current_slot = current_slot + 1
+    if current_slot > 8 then
+      current_slot = 1
+      current_interface = current_interface + 1
+    end
+  end
+  
+  os.sleep(sleep_apothecary_seed_delay)
+  
+  for i = 1, #recipe.sets[2] do
+    while not transposer.transferItem(interface_sides[current_interface], transposer_apothecary, 1, current_slot, 1) do
+      os.sleep(sleep_wait_item_crafting)
+    end
+    
+    current_slot = current_slot + 1
+    if current_slot > 8 then
+      current_slot = 1
+      current_interface = current_interface + 1
+    end
+  end
+end
+
+function craftBrewery(recipe)
+  displayCraftStatus("Crafting: Dropping items")
+  local current_interface = 1
+  local current_slot = 1
+  for i = 1, #recipe.sets[1] do
+    while not transposer.transferItem(interface_sides[current_interface], transposer_brewery, 1, current_slot, 1) do
+      os.sleep(sleep_wait_item_crafting)
+    end
+    
+    current_slot = current_slot + 1
+    if current_slot > 8 then
+      current_slot = 1
+      current_interface = current_interface + 1
+    end
+  end
+  
+  os.sleep(sleep_brewery_item_delay)
+  
+  for i = 1, #recipe.sets[2] do
+    while not transposer.transferItem(interface_sides[current_interface], transposer_brewery, 1, current_slot, 1) do
+      os.sleep(sleep_wait_item_crafting)
+    end
+    
+    current_slot = current_slot + 1
+    if current_slot > 8 then
+      current_slot = 1
+      current_interface = current_interface + 1
+    end
+  end
+
+  displayCraftStatus("Crafting: Waiting for brewery to finish")
+  os.sleep(sleep_wait_brewery_initiate_crafting)
+  while redstone.getBundledInput(rs_side, rs_i_brewery) == rs_level_brewery_crafting do
+    os.sleep(sleep_wait_brewery_crafting)
+  end
+end
+
+function craftAltar(recipe)
+  displayCraftStatus("Crafting: Dropping items")
+  local current_interface = 1
+  local current_slot = 1
+  for i = 1, #recipe.sets[1] do
+    while not transposer.transferItem(interface_sides[current_interface], transposer_altar, 1, current_slot, 1) do
+      os.sleep(sleep_wait_item_crafting)
+    end
+    
+    current_slot = current_slot + 1
+    if current_slot > 8 then
+      current_slot = 1
+      current_interface = current_interface + 1
+    end
+  end
+  
+  os.sleep(sleep_altar_start_delay)
+  pulse(rs_o_dispenser)
+  
+  displayCraftStatus("Crafting: Waiting for altar to finish")
+  os.sleep(sleep_wait_altar_initiate_crafting)
+  while redstone.getBundledInput(rs_side, rs_i_altar) ~= rs_level_altar_done do
+    os.sleep(sleep_wait_altar_crafting)
+  end
+  
+  displayCraftStatus("Crafting: Finishing altar crafting")
+  for i = 1, #recipe.sets[2] do
+    while not transposer.transferItem(interface_sides[current_interface], transposer_altar, 1, current_slot, 1) do
+      os.sleep(sleep_wait_item_crafting)
+    end
+    
+    current_slot = current_slot + 1
+    if current_slot > 8 then
+      current_slot = 1
+      current_interface = current_interface + 1
+    end
+  end
+  
+  os.sleep(sleep_altar_finish_delay)
+  pulse(rs_o_dispenser)
+
+end
+
+local crafting = {
+  altar=craftAltar,
+  apothecary=craftApothecary,
+  brewery=craftBrewery
+}
+
 function craft(recipe)
-  local n = getCraftCount(recipe)
-  if (n==0) then
+  local count = getCraftCount(recipe)
+  if (count==0) then
     return
   end
+
+  displayCraftTitle(recipe.name)
+  displayCraftStatus("Setting up")
+  
+  local current_interface = 1
+  local current_slot = 1
+  
+  clearInterfaces()
+  disableInterfaces(false)
+  
+  for s, set in ipairs(recipe.sets) do
+    for i, item in ipairs(set) do
+      interfaces[current_interface].setInterfaceConfiguration(current_slot, item.db, item.index, 1)
+      
+      current_slot = current_slot + 1
+      if current_slot > 8 then
+        current_slot = 1
+        current_interface = current_interface + 1
+      end
+    end
+  end
+  
+  for n = 1, count do
+    displayCraftIteration(n,count)
+    displayCraftStatus("Waiting for items")
+    
+    item_missing = true
+    while item_missing do
+      local current_interface = 1
+      local current_slot = 1
+      item_missing = false
+      for s, set in ipairs(recipe.sets) do
+        for i, item in ipairs(set) do
+          local c = transposer.getSlotStackSize(interface_sides[current_interface], current_slot)
+          if c == 0 then
+            item_missing = true
+            break
+          end
+          
+          current_slot = current_slot + 1
+          if current_slot > 8 then
+            current_slot = 1
+            current_interface = current_interface + 1
+          end
+        end
+        if item_missing then
+          break
+        end
+      end
+      if item_missing then
+        os.sleep(sleep_item_missing)
+      end
+    end
+    
+    if n == count then
+      -- Last iteration, prevent ae crafting of components
+      disableInterfaces(true)
+    end
+   
+    displayCraftStatus("Crafting")
+    crafting[recipe.rtype](recipe)
+  end
+  displayCraftStatus("Finishing up")
+  clearInterfaces()
+  disableInterfaces(false)
 end
 
 function displayRecipe()
@@ -369,6 +754,9 @@ function handleRecipeTouch(x, y, button)
     end
   end
 end
+
+clearInterfaces()
+disableInterfaces(false)
 
 dirty = true
 while true do

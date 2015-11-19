@@ -15,7 +15,7 @@ local fg_default = 0xCCCCCC
 local fg_hilite = 0xFFFFFF
 local fg_error = 0xFF0000
 
-local recipe_types = {"altar", "apothecary", "potion"}
+local recipe_types = {"altar", "apothecary", "brewery"}
 local recipe_folder = "/recipes"
 
 local dirty = true
