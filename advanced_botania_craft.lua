@@ -35,8 +35,8 @@ function setColors(tag)
 end
 
 local interfaces = {
-  component.proxy("1b9ae71b-dfb1-4b29-a370-be5897e77430"),
-  component.proxy("f198827c-402c-4afa-b451-e81947e8ee5f")
+  component.proxy("0d3bc5ff-8815-447c-9550-bcdd932e45e5"),
+  component.proxy("a3680b93-359c-4f9e-95fc-e7a004901998")
 }
 
 local interface_sides = {
