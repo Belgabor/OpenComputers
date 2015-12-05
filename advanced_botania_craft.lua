@@ -66,7 +66,7 @@ local sleep_apothecary_seed_delay = 0.5
 local sleep_brewery_item_delay = 0.5
 local sleep_wait_brewery_crafting = 5
 local sleep_wait_brewery_initiate_crafting = 2
-local sleep_altar_start_delay = 1
+local sleep_altar_start_delay = 2
 local sleep_wait_altar_initiate_crafting = 2
 local sleep_wait_altar_crafting = 5
 local sleep_altar_finish_delay = 1
@@ -128,33 +128,35 @@ for fname in filesystem.list(recipe_folder) do
     local r = serialization.unserialize(f:read("*all"))
     f:close()
     
-    local recipe_broken = false
-    for s, set in ipairs(r.sets) do
-      for i, item in ipairs(set) do
-        local db = dbs[item.db]
-        
-        if not db then
-          recipe_broken = true
-          print("  Error: Item '"..item.label.."' not found")
+    if (r["rtype"] == "apothecary") or (r["rtype"] == "altar") or (r["rtype"] == "brewery") then
+      local recipe_broken = false
+      for s, set in ipairs(r.sets) do
+        for i, item in ipairs(set) do
+          local db = dbs[item.db]
+          
+          if not db then
+            recipe_broken = true
+            print("  Error: Item '"..item.label.."' not found")
+            break
+          end
+          
+          local the_item = db.get(item.index)
+          if not the_item then
+            recipe_broken = true
+            print("  Error: Item '"..item.label.."' not found")
+            break
+          end
+          
+          item.item = the_item
+        end
+        if recipe_broken then
           break
         end
-        
-        local the_item = db.get(item.index)
-        if not the_item then
-          recipe_broken = true
-          print("  Error: Item '"..item.label.."' not found")
-          break
-        end
-        
-        item.item = the_item
       end
-      if recipe_broken then
-        break
+      
+      if not recipe_broken then
+        table.insert(recipes, r)
       end
-    end
-    
-    if not recipe_broken then
-      table.insert(recipes, r)
     end
   end
 end

@@ -202,7 +202,7 @@ function displayMe()
       s = "0"
     end
     s = s..i.." "..me_display[i].label
-    gpu.set(col_map[current_col].l, current_row, string.sub(s, 1, me_col_width))
+    gpu.set(me_col_map[current_col].l, current_row, string.sub(s, 1, me_col_width))
     me_col_map[current_col][current_row] = i
     
     current_row = current_row + 1
@@ -270,6 +270,7 @@ function handleMeKey(kb, char, code, player)
       end
       me_dirty = true
     end
+    return
   end
   if (char == 0) and (code == 211) then
     if query then
@@ -377,8 +378,8 @@ function handleDbTouch(x, y, button)
           local newitem = getNewitem()
           if newitem then
             me.store(newitem, the_db.db.address, item, 1)
+            dirty = true
           end
-          dirty = true
         end
         break
       end
@@ -389,11 +390,10 @@ end
 while true do
   if dirty then
     buildCache()
-    displayDb()
-    displayDbButtons()
-    
     dirty = false
   end
+  displayDb()    
+  displayDbButtons()
   local ev, _, x, y, button, player = event.pull("touch")
   handleDbTouch(x,y,button)
 end

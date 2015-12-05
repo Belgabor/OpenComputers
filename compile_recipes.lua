@@ -55,23 +55,27 @@ for i, recipe in ipairs(recipes) do
     comp.sets[s] = {}
     for i, item in ipairs(set) do
       local citem = {label=item.label,hash=item.hash}
-      local the_db, the_index
-      for d, db in ipairs(dbs) do
-        local index = db.db.indexOf(item.hash)
-        if index>0 then
-          the_db = db.db.address
-          the_index = index
+      
+      if item.hash ~= nil then
+        local the_db, the_index
+        for d, db in ipairs(dbs) do
+          local index = db.db.indexOf(item.hash)
+          if index>0 then
+            the_db = db.db.address
+            the_index = index
+          end
         end
+        
+        if not the_db then
+          recipe_broken = true
+          print("  Error: Item '"..item.label.."' not found")
+          break
+        end
+        
+        citem.db = the_db
+        citem.index = the_index
       end
       
-      if not the_db then
-        recipe_broken = true
-        print("  Error: Item '"..item.label.."' not found")
-        break
-      end
-      
-      citem.db = the_db
-      citem.index = the_index
       comp.sets[s][i] = citem
     end
     if recipe_broken then

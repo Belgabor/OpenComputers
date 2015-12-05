@@ -15,7 +15,7 @@ local fg_default = 0xCCCCCC
 local fg_hilite = 0xFFFFFF
 local fg_error = 0xFF0000
 
-local recipe_types = {"altar", "apothecary", "brewery"}
+local recipe_types = {"altar", "apothecary", "brewery", "worktable"}
 local recipe_folder = "/recipes"
 
 local dirty = true
@@ -254,7 +254,12 @@ function handleDbTouch(x, y, button)
     if (x >= col_map[c].l) and (x <= col_map[c].r) then
       local item = col_map[c][y]
       if item then
-        the_item = {label=the_db.db.get(item).label, hash=the_db.db.computeHash(item)}
+        local ref_item = the_db.db.get(item)
+        if ref_item ~= nil then
+          the_item = {label=ref_item.label, hash=the_db.db.computeHash(item)}
+        else
+          the_item = {label="-- Spacer --", hash=nil}
+        end
         break
       end
     end
@@ -479,6 +484,7 @@ function handleMainKey(kb, char, code, player)
         current_name = string.sub(current_name, 1, -2)
         main_dirty = true
       end
+      return
     end
     if (char == 13) and (code == 28) then
       finishEditing(true)
